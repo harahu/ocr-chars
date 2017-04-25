@@ -2,7 +2,6 @@ import os, collections, random
 from skimage import io
 import numpy as np
 from string import ascii_lowercase
-from tensorflow.python.framework import dtypes
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
 
@@ -57,13 +56,13 @@ class DataSet(object):
             return self._images[start:end], self._labels[start:end]
 
 
-def one_hot(index):
+def _one_hot(index):
     label = np.zeros(26)
     label[index] = 1
     return label
 
 
-def extract_data(validation_fraction, test_fraction):
+def _extract_data(validation_fraction, test_fraction):
     data = []
     # Iterate through lowercase alphabet
     for c in ascii_lowercase:
@@ -89,11 +88,11 @@ def extract_data(validation_fraction, test_fraction):
         vl_index = int(l*validation_fraction)
         ts_index = int(l - l*test_fraction)
         for img in c_data[:vl_index]:
-            vl.append([img, one_hot(one_hot_index)])
+            vl.append([img, _one_hot(one_hot_index)])
         for img in c_data[vl_index:ts_index]:
-            tr.append([img, one_hot(one_hot_index)])
+            tr.append([img, _one_hot(one_hot_index)])
         for img in c_data[ts_index:]:
-            ts.append([img, one_hot(one_hot_index)])
+            ts.append([img, _one_hot(one_hot_index)])
         one_hot_index += 1
     random.shuffle(tr)
     random.shuffle(vl)
@@ -110,7 +109,7 @@ def extract_data(validation_fraction, test_fraction):
 
 
 def read_data_sets(validation_fraction=0.0, test_fraction=0.2):
-    data = extract_data(validation_fraction, test_fraction)
+    data = _extract_data(validation_fraction, test_fraction)
     train_images, train_labels = data[0], data[1]
     validation_images, validation_labels = data[2], data[3]
     test_images, test_labels = data[4], data[5]
