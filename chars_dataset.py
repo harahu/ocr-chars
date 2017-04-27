@@ -136,7 +136,7 @@ def _rescale(img):
     return np.multiply(img.astype(np.float32), 1.0 / 255.0)
 
 
-def _extract_data(validation_fraction, test_fraction, data_format ='scaled'):
+def _extract_data(validation_fraction, test_fraction, data_format='scaled'):
     data = []
     # Iterate through lowercase alphabet
     for c in ascii_lowercase:
@@ -192,8 +192,8 @@ def _extract_data(validation_fraction, test_fraction, data_format ='scaled'):
     return tr_imgs, tr_lbs, vl_imgs, vl_lbs, ts_imgs, ts_lbs
 
 
-def read_data_sets(validation_fraction=0.0, test_fraction=0.2):
-    data = _extract_data(validation_fraction, test_fraction)
+def read_data_sets(validation_fraction=0.0, test_fraction=0.2, data_format='scaled'):
+    data = _extract_data(validation_fraction, test_fraction, data_format)
     train_images, train_labels = data[0], data[1]
     validation_images, validation_labels = data[2], data[3]
     test_images, test_labels = data[4], data[5]

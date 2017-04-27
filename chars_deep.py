@@ -97,7 +97,7 @@ def classify_chars(images):
 
     # Define classification
     letter_class = tf.argmax(y_conv, 1)
-    confidence = tf.max(y_conv, 1)
+    confidence = tf.maximum(y_conv, 1)
 
     # Enable saving and loading of variables
     saver = tf.train.Saver()

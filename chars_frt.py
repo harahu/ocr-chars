@@ -3,7 +3,7 @@ import chars_dataset
 import numpy as np
 
 # Import data
-chars = chars_dataset.read_data_sets()
+chars = chars_dataset.read_data_sets(data_format='binary')
 
 X = chars.train.images
 Y = chars.train.labels
