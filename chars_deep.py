@@ -1,6 +1,7 @@
 import tensorflow as tf
 import os
 import chars_dataset
+import numpy as np
 
 # Disable compile warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -88,7 +89,7 @@ def _bias_variable(shape):
     return tf.Variable(initial)
 
 
-def classify_chars(images):
+def classify_chars(images, restore=False):
     # Create the model
     x = tf.placeholder(tf.float32, [None, 400])
 
@@ -97,7 +98,7 @@ def classify_chars(images):
 
     # Define classification
     letter_class = tf.argmax(y_conv, 1)
-    confidence = tf.maximum(y_conv, 1)
+    confidence = tf.reduce_max(tf.nn.softmax(y_conv), 1)
 
     # Enable saving and loading of variables
     saver = tf.train.Saver()
@@ -108,9 +109,9 @@ def classify_chars(images):
         print("Model restored.")
 
         images_classes = letter_class.eval(feed_dict={x: images, keep_prob: 1.0})
-        images_confidence = confidence.eval(feed_dict={x: images, keep_prob: 1.0})
+        images_confidences = confidence.eval(feed_dict={x: images, keep_prob: 1.0})
 
-        return images_classes, images_confidence
+    return images_classes, images_confidences
 
 
 def train_model():
@@ -160,4 +161,7 @@ def train_model():
             x: chars.test.images, y_: chars.test.labels, keep_prob: 1.0})))
 
 if __name__ == '__main__':
-    train_model()
+    chars = chars_dataset.read_data_sets()
+    print(classify_chars(chars.test.images, True))
+    print(classify_chars(chars.train.images))
+    print(classify_chars(chars.test.images))
