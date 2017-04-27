@@ -1,9 +1,46 @@
 import os, collections, random
 from skimage import io
+from skimage.filters import threshold_otsu
 import numpy as np
 from string import ascii_lowercase
+import matplotlib
+import matplotlib.pyplot as plt
+
 
 Datasets = collections.namedtuple('Datasets', ['train', 'validation', 'test'])
+
+
+def plot_samples(samples):
+    """Return a plot of the input samples in a grid.
+
+    The number of samples and sample size must be divisible by 2.
+
+    Parameter
+    ---------
+    samples : numpy.ndarray
+        Must have exactly two dimensions. The first is the sample
+        number, while the second is the sample itself (a vector of
+        numbers).
+    """
+    assert samples.shape[0] % 2 == 0,\
+        ('Number of samples is not divisible by 2.')
+    assert len(samples[0]) % 2 == 0,\
+        ('Sample size is not divisible by 2.')
+
+    grid_size = int(np.sqrt(samples.shape[0]))
+    img_size = int(np.sqrt(len(samples[0])))
+
+    figure = plt.figure(figsize=(grid_size, grid_size))
+    grid = matplotlib.gridspec.GridSpec(grid_size, grid_size)
+    grid.update(hspace=0.1, wspace=0.1)
+
+    for idx, sample in enumerate(samples):
+        ax = plt.subplot(grid[idx])
+        ax.get_xaxis().set_ticks([])
+        ax.get_yaxis().set_ticks([])
+        ax.imshow(sample.reshape(img_size, img_size), cmap=plt.cm.gray)
+
+    return figure
 
 
 class DataSet(object):
@@ -12,8 +49,6 @@ class DataSet(object):
                  images,
                  labels):
         self._num_examples = images.shape[0]
-        images = images.astype(np.float32)
-        images = np.multiply(images, 1.0 / 255.0)
         self._images = images
         self._labels = labels
         self._epochs_completed = 0
@@ -62,7 +97,46 @@ def _one_hot(index):
     return label
 
 
-def _extract_data(validation_fraction, test_fraction):
+def _binary_img(img):
+    thresh = threshold_otsu(img)
+    binary = img < thresh
+    binary = binary.astype(np.float32)
+    return binary
+
+
+def _support(projections):
+    sup = (projections != 0).astype(np.float32)
+    sup = np.add.reduce(sup)
+    return sup
+
+
+def _projection_features(binary):
+    row_projections = np.add.reduce(binary, 0)
+    col_projections = np.add.reduce(binary, 1)
+    r_max = np.max(row_projections)
+    r_max_p = np.argmax(row_projections)
+    r_mean = np.mean(row_projections)
+    r_sup = _support(row_projections)
+    c_max = np.max(col_projections)
+    c_max_p = np.argmax(col_projections)
+    c_mean = np.mean(col_projections)
+    c_sup = _support(col_projections)
+    return np.array([r_max, r_max_p, r_mean, r_sup, c_max, c_max_p, c_mean, c_sup])
+
+
+def _transition_features(binary):
+    row_gradients = (np.gradient(binary, axis=0) != 0).astype(np.float32)
+    col_gradients = (np.gradient(binary, axis=1) != 0).astype(np.float32)
+    row_transitions = np.add.reduce(row_gradients, 1)
+    col_transitions = np.add.reduce(col_gradients, 1)
+    return np.array([np.max(row_transitions), np.max(col_transitions)])
+
+
+def _rescale(img):
+    return np.multiply(img.astype(np.float32), 1.0 / 255.0)
+
+
+def _extract_data(validation_fraction, test_fraction, data_format ='scaled'):
     data = []
     # Iterate through lowercase alphabet
     for c in ascii_lowercase:
@@ -73,8 +147,18 @@ def _extract_data(validation_fraction, test_fraction):
             if filename[:2] != c + '_':
                 continue
 
-            img = np.asarray(io.imread(c_dir + '/' + filename)).flatten()
-            c_data.append(img)
+            img = io.imread(c_dir + '/' + filename)
+            if data_format == 'scaled':
+                img = _rescale(img)
+                c_data.append(img.flatten())
+            elif data_format == 'binary':
+                binary = _binary_img(img)
+                c_data.append(binary.flatten())
+            elif data_format == 'compressed':
+                binary = _binary_img(img)
+                feature_vector = _projection_features(binary)
+                feature_vector = np.append(feature_vector, _transition_features(binary))
+                c_data.append(feature_vector)
 
         random.shuffle(c_data)
         data.append(c_data)
