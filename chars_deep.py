@@ -104,7 +104,7 @@ def classify_chars(images):
 
     with tf.Session() as sess:
         # Restore variables from disk.
-        saver.restore(sess, M_PATH)
+        saver.restore(sess, os.path.join(M_PATH, "chess_model.ckpt"))
         print("Model restored.")
 
         images_classes = letter_class.eval(feed_dict={x: images, keep_prob: 1.0})
