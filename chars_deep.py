@@ -6,7 +6,7 @@ import chars_dataset
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # Model save path
-M_PATH = os.path.join(os.getcwd(), "deep_model", "chess_model.ckpt")
+M_PATH = os.path.join(os.getcwd(), "deep_model")
 
 
 
@@ -95,6 +95,10 @@ def classify_chars(images):
     # Build the graph for the deep net
     y_conv, keep_prob = _deepnn(x)
 
+    # Define classification
+    letter_class = tf.argmax(y_conv, 1)
+    confidence = tf.max(y_conv, 1)
+
     # Enable saving and loading of variables
     saver = tf.train.Saver()
 
@@ -103,9 +107,10 @@ def classify_chars(images):
         saver.restore(sess, M_PATH)
         print("Model restored.")
 
-        images_classes = y_conv.eval(feed_dict={x: images, keep_prob: 1.0})
+        images_classes = letter_class.eval(feed_dict={x: images, keep_prob: 1.0})
+        images_confidence = confidence.eval(feed_dict={x: images, keep_prob: 1.0})
 
-        return images_classes
+        return images_classes, images_confidence
 
 
 def train_model():
@@ -134,7 +139,7 @@ def train_model():
 
     with tf.Session() as sess:
         sess.run(tf.global_variables_initializer())
-        max_ta = 0.75
+        max_ta = 0.80
         for i in range(20000):
             batch = chars.train.next_batch(50)
             if i % 100 == 0:
@@ -146,7 +151,7 @@ def train_model():
                     i, train_accuracy, test_accuracy))
                 if test_accuracy > max_ta:
                     # Save the variables to disk.
-                    save_path = saver.save(sess, M_PATH)
+                    save_path = saver.save(sess, os.path.join(M_PATH, "chess_model.ckpt"))
                     print("Model saved in file: {}".format(save_path))
                     max_ta = test_accuracy
             train_step.run(feed_dict={x: batch[0], y_: batch[1], keep_prob: 0.5})
